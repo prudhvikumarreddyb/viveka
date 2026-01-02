@@ -9,21 +9,53 @@ DATA_FILE = Path(__file__).parents[1] / "data" / "cashflow.json"
 # 📦 DATA HELPERS
 # =====================================================
 
+from lifeos.utils.db import get_connection
+
 def load_cashflow():
-    if not DATA_FILE.exists():
-        return {
-            "monthly_income": 0,
-            "fixed_expenses": [],
-            "variable_expenses": []
-        }
-    with open(DATA_FILE, "r") as f:
-        return json.load(f)
+    conn = get_connection()
+    cur = conn.cursor()
 
+    cur.execute("SELECT monthly_income FROM cashflow WHERE id=1")
+    row = cur.fetchone()
+    income = row[0] if row else 0
 
+    cur.execute("SELECT name, amount FROM expenses WHERE type='fixed'")
+    fixed = [{"name": r[0], "amount": r[1]} for r in cur.fetchall()]
+
+    cur.execute("SELECT name, amount FROM expenses WHERE type='variable'")
+    variable = [{"name": r[0], "amount": r[1]} for r in cur.fetchall()]
+
+    conn.close()
+
+    return {
+        "monthly_income": income,
+        "fixed_expenses": fixed,
+        "variable_expenses": variable
+    }
 def save_cashflow(data):
-    with open(DATA_FILE, "w") as f:
-        json.dump(data, f, indent=2)
+    conn = get_connection()
+    cur = conn.cursor()
 
+    cur.execute("DELETE FROM cashflow")
+    cur.execute("INSERT INTO cashflow (id, monthly_income) VALUES (1, ?)",
+                (data["monthly_income"],))
+
+    cur.execute("DELETE FROM expenses")
+
+    for e in data["fixed_expenses"]:
+        cur.execute(
+            "INSERT INTO expenses (type, name, amount) VALUES (?, ?, ?)",
+            ("fixed", e["name"], e["amount"])
+        )
+
+    for e in data["variable_expenses"]:
+        cur.execute(
+            "INSERT INTO expenses (type, name, amount) VALUES (?, ?, ?)",
+            ("variable", e["name"], e["amount"])
+        )
+
+    conn.commit()
+    conn.close()
 
 # =====================================================
 # 💰 CASHFLOW PAGE
