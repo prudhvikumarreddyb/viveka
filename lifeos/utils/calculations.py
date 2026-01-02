@@ -10,11 +10,18 @@ DATA_PATH = Path(__file__).resolve().parents[1] / "data" / "loans.json"
 # -------------------------------------------------
 # LOAD / SAVE
 # -------------------------------------------------
-from lifeos.utils.db import get_connection
+from lifeos.utils.db import get_connection, init_db
 
 def load_loans():
+    init_db()  # ensure tables exist
+
     conn = get_connection()
     cur = conn.cursor()
+
+    cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='loans'")
+    if not cur.fetchone():
+        conn.close()
+        return []
 
     cur.execute("SELECT * FROM loans")
     cols = [c[0] for c in cur.description]
@@ -22,6 +29,7 @@ def load_loans():
 
     conn.close()
     return loans
+
 
 def save_loans(loans):
     conn = get_connection()
