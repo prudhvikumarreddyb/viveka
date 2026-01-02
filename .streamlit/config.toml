@@ -1,0 +1,14 @@
+[theme]
+base = "light"
+
+# Soft, warm white instead of pure white
+backgroundColor = "#FAFAFA"
+
+# Slightly darker card/sidebar background
+secondaryBackgroundColor = "#F3F4F6"
+
+# Calm blue (already using)
+primaryColor = "#2563EB"
+
+# Dark gray text (less harsh than pure black)
+textColor = "#111827"

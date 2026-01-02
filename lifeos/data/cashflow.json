@@ -1,0 +1,15 @@
+{
+  "monthly_income": 195000,
+  "fixed_expenses": [
+    {
+      "name": "Rent",
+      "amount": 17000
+    }
+  ],
+  "variable_expenses": [
+    {
+      "name": "Food",
+      "amount": 5000
+    }
+  ]
+}
