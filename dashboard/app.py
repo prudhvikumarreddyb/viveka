@@ -11,7 +11,7 @@ from lifeos.utils.db import init_db
 
 init_db()
 
-from lifeos.pages.lifeos import render_lifeos
+from lifeos.pages.loans import render_loans
 from lifeos.pages.cashflow import render_cashflow
 from lifeos.utils.calculations import load_cashflow, load_loans
 from lifeos.pages.manage_loans import render_manage_loans
@@ -321,7 +321,7 @@ nav_button("💰 Cashflow", "cashflow")
 if st.session_state.page == "dashboard":
     render_dashboard()
 elif st.session_state.page == "loans":
-    render_lifeos()
+    render_loans()
 elif st.session_state.page == "manage_loans":
     render_manage_loans()
 

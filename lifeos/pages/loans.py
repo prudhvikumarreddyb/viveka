@@ -131,7 +131,7 @@ def calculate_emi_risk_score(emi_loans, income, expenses):
 # 🧠 LIFEOS MAIN
 # =====================================================
 
-def render_lifeos(loans=None):
+def render_loans(loans=None):
     st.subheader("🧠 LifeOS – Financial Clarity System")
 
     if loans is None:
@@ -145,8 +145,6 @@ def render_lifeos(loans=None):
         l.setdefault("last_paid_month", "")
 
     emi_loans = [l for l in loans if l["type"] == "EMI" and l["status"] == "ACTIVE"]
-    settlement_loans = [l for l in loans if l["type"] == "SETTLEMENT" and l["status"] == "ACTIVE"]
-    closed_loans = [l for l in loans if l["status"] == "CLOSED"]
 
     # =====================================================
     # 🔢 SORT EMI LOANS (closest to completion first)
@@ -390,117 +388,3 @@ def render_lifeos(loans=None):
                 save_loans(loans)
                 st.success(f"EMI marked paid for {l['lender']}")
                 st.rerun()
-
-    # =====================================================
-    # 🧩 SETTLEMENT SUMMARY
-    # =====================================================
-
-    if settlement_loans:
-        st.markdown("### 📊 Settlement Summary")
-        s1, s2, s3 = st.columns(3)
-        s1.metric("Outstanding", f"₹{sum(l['outstanding'] for l in settlement_loans):,}")
-        s2.metric("31% Target", f"₹{sum(int(l['outstanding'] * 0.31) for l in settlement_loans):,}")
-        s3.metric("Latest Offers", f"₹{sum(l['latest_offer'] for l in settlement_loans):,}")
-
-    # =====================================================
-    # 🧩 SETTLEMENT LOANS TABLE (EDITABLE)
-    # =====================================================
-
-    st.markdown("## 🧩 Settlement Loans")
-    edit_settle = st.toggle("Edit Settlement Offers", value=False)
-
-    rows = []
-    for l in settlement_loans:
-        target_31 = int(l["outstanding"] * 0.31)
-        rows.append({
-            "Loan No": l["id"],
-            "Lender": l["lender"],
-            "Outstanding (₹)": l["outstanding"],
-            "31% Target (₹)": target_31,
-            "Latest Offer (₹)": l.get("latest_offer", 0),
-            "Diff vs 31% (₹)": int(l.get("latest_offer", 0)) - target_31,
-            "Mark Settled": False,
-            "Settled Date": date.today(),
-        })
-
-    df_settle = pd.DataFrame(rows)
-
-    if edit_settle:
-        st.caption("Edit Latest Offer and mark settled if you've closed the account.")
-        edited = st.data_editor(
-            df_settle,
-            hide_index=True,
-            use_container_width=True,
-            disabled=[
-                "Loan No", "Lender", "Outstanding (₹)", "31% Target (₹)", "Diff vs 31% (₹)"
-            ],
-        )
-
-        if not edited.equals(df_settle):
-            clean = edited[edited["Loan No"].astype(str).str.strip() != ""]
-            updates = clean.set_index("Loan No").to_dict("index")
-            for loan in loans:
-                if loan["id"] in updates:
-                    row = updates[loan["id"]]
-                    try:
-                        loan["latest_offer"] = int(row.get("Latest Offer (₹)") or 0)
-                    except Exception:
-                        loan["latest_offer"] = 0
-                    if row.get("Mark Settled"):
-                        loan["status"] = "CLOSED"
-                        loan["settlement_amount"] = loan["latest_offer"]
-                        loan["settled_date"] = str(row.get("Settled Date") or date.today())
-            save_loans(loans)
-            st.rerun()
-    else:
-        if not df_settle.empty:
-            st.dataframe(
-                df_settle
-                .style
-                .applymap(diff_31_style, subset=["Diff vs 31% (₹)"]),
-                use_container_width=True,
-            )
-        else:
-            st.info("No active settlement loans")
-
-    # =====================================================
-    # 📊 CLOSED LOANS SUMMARY
-    # =====================================================
-
-    if closed_loans:
-        st.markdown("### 📊 Closed Loans Summary")
-        c1, c2, c3, c4 = st.columns(4)
-        total_out = sum(l["outstanding"] for l in closed_loans)
-        total_paid = sum(l["settlement_amount"] for l in closed_loans)
-        total_31 = sum(int(l["outstanding"] * 0.31) for l in closed_loans)
-        c1.metric("Outstanding", f"₹{total_out:,}")
-        c2.metric("31% Benchmark", f"₹{total_31:,}")
-        c3.metric("Paid", f"₹{total_paid:,}")
-        c4.metric("Saved", f"₹{total_out - total_paid:,}")
-
-    # =====================================================
-    # ✅ CLOSED LOANS TABLE
-    # =====================================================
-
-    st.markdown("## ✅ Closed Loans")
-
-    rows = []
-    for l in closed_loans:
-        target_31 = int(l["outstanding"] * 0.31)
-        rows.append({
-            "Loan No": l["id"],
-            "Lender": l["lender"],
-            "Outstanding (₹)": l["outstanding"],
-            "31% Benchmark (₹)": target_31,
-            "Paid (₹)": l["settlement_amount"],
-            "Above / Below 31% (₹)": l["settlement_amount"] - target_31,
-        })
-
-    if rows:
-        df_closed = pd.DataFrame(rows)
-        st.dataframe(
-            df_closed.style.applymap(diff_31_style, subset=["Above / Below 31% (₹)"]),
-            use_container_width=True,
-        )
-    else:
-        st.info("No closed loans yet")
